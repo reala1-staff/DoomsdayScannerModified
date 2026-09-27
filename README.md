@@ -1,184 +1,254 @@
 # DoomsdayScannerModified
-Doomsday Client Scanner v3 — PowerShell forensic scanner made by Real. Detects Doomsday Client traces using Prefetch, USN Journal, JAR analysis, byte signatures and evidence-based detection.
-# Doomsday Client Scanner
 
-A PowerShell forensic scanner designed to detect traces and possible installations of **Doomsday Client** on Windows systems.
+**Doomsday Client Scanner v3** is a PowerShell forensic script made by **Real** for detecting traces of the Doomsday ghost client on Windows.
 
-The scanner analyzes Java-related Prefetch data, referenced files, JAR contents, byte signatures, class patterns and NTFS USN Journal activity to provide multiple sources of evidence instead of relying on a single filename or location.
+The scanner combines multiple sources of local evidence instead of relying only on filenames or known locations.
 
 ## Features
 
-- Scans Windows Java Prefetch entries
-- Extracts file references from Prefetch
-- Supports Windows 10 and Windows 11 Prefetch formats
-- Searches referenced files across available drives
-- Detects JAR files even when the extension has been changed
-- Analyzes `.class` files inside JAR archives
-- Searches for known Doomsday byte patterns
-- Detects suspicious class structures and obfuscation patterns
-- Uses the NTFS USN Journal to check recent file activity
-- Calculates SHA-256 hashes for analyzed files
-- Uses an evidence-based detection score
-- Displays detailed detection information
-- Generates a forensic JSON report
+- Java Prefetch analysis
+- NTFS USN Journal analysis
+- JAR/ZIP inspection by file content
+- Known Doomsday byte signatures
+- Class structure analysis
+- Detection of renamed or disguised archives
+- Nested archive inspection
+- SHA-256 hashing
+- Recent file activity analysis
+- Evidence-based scoring
+- JSON forensic reports
+- Windows 10 / Windows 11 support
+- PowerShell 5.1+ support
 
-## Detection System
+## Usage
 
-The scanner does not rely on a single indicator.
+No installer is required.
 
-Different pieces of evidence contribute to the final detection score. Strong Doomsday-specific signatures have significantly more weight than generic indicators such as obfuscated class names or a renamed JAR.
+The scanner is a standalone PowerShell script:
 
-Results are classified by confidence:
+```text
+Doomsday-scannerv3.ps1
+```
 
-| Confidence | Meaning |
+Open **PowerShell as Administrator**, open the folder containing the script and run:
+
+```powershell
+.\Doomsday-scannerv3.ps1
+```
+
+### Scan an additional folder
+
+You can also specify folders that should be scanned recursively:
+
+```powershell
+.\Doomsday-scannerv3.ps1 -ScanPath "$env:APPDATA\.minecraft"
+```
+
+### Debug output
+
+```powershell
+.\Doomsday-scannerv3.ps1 -DebugLog
+```
+
+### Custom report location
+
+```powershell
+.\Doomsday-scannerv3.ps1 -OutputPath "C:\Reports"
+```
+
+## How detection works
+
+DoomsdayScannerModified does not automatically flag a file just because it has a suspicious name or extension.
+
+The scanner collects several types of evidence and combines them into a detection score.
+
+### Strong evidence
+
+Known Doomsday bytecode signatures and known hashes are treated as the strongest indicators.
+
+### Structural evidence
+
+The scanner analyzes Java class structures and known class patterns associated with the client.
+
+### Secondary evidence
+
+Additional characteristics can increase confidence, including:
+
+- JAR content hidden behind another extension
+- Hidden class data
+- Suspicious archive structure
+- Java Agent metadata
+- NTFS alternate data streams
+- Obfuscation characteristics
+
+These indicators alone are not considered enough to prove that a file is Doomsday.
+
+### Context evidence
+
+Windows artifacts can provide additional context:
+
+- Java Prefetch
+- NTFS USN Journal
+- Recent file activity
+
+Context shows that a file may have existed or been used, but does not identify the file as Doomsday by itself.
+
+## Detection levels
+
+| Result | Meaning |
 |---|---|
-| HIGH | Strong evidence associated with Doomsday was detected |
-| MEDIUM | Multiple suspicious indicators were detected |
-| LOW | Some indicators were found, but they are not enough for a strong detection |
-| NONE | No relevant indicators were detected |
+| `HIGH` | Strong Doomsday-specific evidence was found |
+| `MEDIUM` | Relevant evidence was found but should be reviewed |
+| `NONE` | Not enough evidence for a detection |
 
-A detection should always be reviewed together with the evidence displayed by the scanner.
+The scanner also displays the evidence responsible for the final result.
+
+## USN Journal
+
+On NTFS drives, the scanner can inspect the Windows USN Journal to obtain additional filesystem context.
+
+This can help identify recent activity involving files referenced by other forensic artifacts.
+
+The scanner distinguishes between:
+
+- Existing files
+- Historical references
+- Recent filesystem activity
+- Rename activity
+- Possible deletion evidence
+
+A missing Prefetch path is **not automatically considered a deleted cheat**.
+
+## JAR Analysis
+
+Archives are inspected by their actual contents rather than only their extension.
+
+This means the scanner can analyze Java archives even when they have been renamed or disguised.
+
+The scanner can inspect:
+
+- `.jar`
+- `.zip`
+- archives using unexpected extensions
+- Java class files
+- nested archives
+
+Class files are analyzed individually to avoid treating unrelated data from different archive entries as one signature.
+
+## Scoring
+
+Doomsday-specific evidence has significantly more weight than generic characteristics.
+
+For example:
+
+```text
+Score: 85/100
+Confidence: HIGH
+
+Evidence:
+[+] Known Doomsday byte signature
+[+] Matching class structure
+[+] Referenced by Java Prefetch
+[i] Recent NTFS activity
+[i] SHA-256 calculated
+```
+
+A renamed JAR, obfuscated classes or recent filesystem activity alone should not produce a strong Doomsday detection.
+
+## Reports
+
+After a scan, the script can generate a structured JSON forensic report containing information such as:
+
+```text
+Scanner version
+Scan time
+File path
+SHA-256
+File size
+Timestamps
+Detection score
+Confidence
+Matched signatures
+Matched classes
+Prefetch evidence
+USN evidence
+Detection reasons
+Errors and warnings
+```
+
+This makes it easier to review the result after the ScreenShare.
 
 ## Requirements
 
 - Windows 10 or Windows 11
 - PowerShell 5.1 or newer
-- Administrator privileges
-- NTFS filesystem for USN Journal analysis
-- Windows Prefetch enabled for Prefetch-based detection
+- Administrator privileges recommended
+- NTFS for USN Journal functionality
 
-Some detection methods may not be available if Prefetch or the USN Journal has been disabled or cleared.
+Some evidence sources may be unavailable when Windows Prefetch or the NTFS USN Journal is disabled or has been cleared.
 
-## Usage
-
-Download:
-
-```text
-doomsday-scanner-v2.ps1
-```
-
-Open PowerShell or Windows Terminal as **Administrator**.
-
-Go to the directory containing the scanner:
+## Parameters
 
 ```powershell
-cd "C:\Path\To\Scanner"
+# Normal scan
+.\Doomsday-scannerv3.ps1
+
+# Scan additional location
+.\Doomsday-scannerv3.ps1 -ScanPath "C:\SomeFolder"
+
+# Change recent USN time window
+.\Doomsday-scannerv3.ps1 -RecentMinutes 120
+
+# Change maximum candidate file size
+.\Doomsday-scannerv3.ps1 -MaxFileSizeMB 256
+
+# Disable USN analysis
+.\Doomsday-scannerv3.ps1 -NoUsn
+
+# Disable JSON report
+.\Doomsday-scannerv3.ps1 -NoJson
+
+# Enable debug information
+.\Doomsday-scannerv3.ps1 -DebugLog
 ```
 
-Run:
+## False positives
 
-```powershell
-.\doomsday-scanner-v2.ps1
-```
+No single generic Java characteristic should be considered proof of a ghost client.
 
-If PowerShell prevents the script from running because of the local execution policy, review your PowerShell execution-policy settings rather than disabling system protections globally.
-
-## How It Works
-
-The scanner follows several stages.
-
-### 1. Prefetch Analysis
-
-Windows Prefetch entries related to Java are inspected and file references are extracted.
-
-This can reveal files previously accessed during Java execution even when their original names or locations are no longer immediately obvious.
-
-### 2. Path Resolution
-
-Extracted paths are checked against the available drives on the system.
-
-If a referenced file is no longer present at its expected location, the scanner can compare that information with recent NTFS activity.
-
-### 3. USN Journal Analysis
-
-On supported NTFS volumes, recent filesystem activity from the USN Journal is collected.
-
-This provides additional forensic context for referenced files that may have recently changed or disappeared.
-
-### 4. JAR Analysis
-
-Candidate JAR/ZIP files are opened and their Java classes are inspected.
-
-The scanner looks for several indicators, including:
-
-- Known byte signatures
-- Known class patterns
-- Obfuscated single-letter classes
-- JAR/ZIP files using unexpected extensions
-
-Generic indicators alone have a lower impact on the final result to reduce false positives.
-
-### 5. Evidence Scoring
-
-All relevant indicators are combined into a detection score.
-
-The final confidence level is based on the strength and combination of the available evidence rather than one generic characteristic.
-
-### 6. Report
-
-Detected files include useful forensic information such as:
-
-- File path
-- Detection score
-- Confidence
-- SHA-256
-- File size
-- File timestamps
-- Matched byte signatures
-- Matched class indicators
-- Renamed JAR status
-- Available filesystem evidence
-
-A JSON report is also generated so results can be reviewed or archived after the scan.
-
-## False Positives
-
-No forensic scanner should treat every suspicious characteristic as definitive proof.
-
-For example, Java applications may legitimately contain:
+Legitimate Java software can contain:
 
 - Obfuscated classes
-- Single-letter class names
-- ZIP/JAR data with unusual extensions
+- Short class names
+- Unusual archive structures
+- Renamed archives
 
-For this reason, these characteristics are treated as supporting indicators rather than definitive Doomsday signatures.
+For this reason, DoomsdayScannerModified gives stronger weight to Doomsday-specific signatures and combinations of independent evidence.
 
-Known binary signatures and combinations of independent evidence receive greater weight.
+Always review the evidence shown by the scanner before making a decision.
 
-## Important
+## Privacy
 
-This project is intended for defensive analysis and authorized ScreenShare/forensic environments.
+The scanner performs its analysis locally.
 
-Only scan systems you own or have permission to inspect.
+It does not require an external API or cloud service to perform the scan.
 
-The scanner reports technical indicators. A detection should be evaluated using the evidence shown instead of treating the confidence label alone as absolute proof.
-
-## Version
-
-**Doomsday Client Scanner v2**
-
-Main improvements over the original version:
-
-- Improved detection scoring
-- Better false-positive handling
-- USN Journal integration
-- SHA-256 collection
-- Improved JAR analysis
-- Higher class-analysis limits
-- Better scan performance
-- More detailed evidence
-- JSON forensic reports
+The forensic report is generated locally on the computer.
 
 ## Credits
 
-Original scanner concept and signatures:
+**DoomsdayScannerModified v3**
+
+Made by **Real**
+
+Based on the original Doomsday detection concept and signatures by:
 
 **iTake (@cheatinformer) @ FM Forensics**
 
-Additional improvements and modifications can be credited separately by repository maintainers.
-
 ## Disclaimer
 
-This software is provided for educational, defensive and forensic purposes.
+This project is intended for defensive analysis, authorized ScreenShares and forensic research.
 
-The authors and contributors are not responsible for misuse of the software or actions performed without authorization.
+Only use it on systems you own or have permission to inspect.
+
+A detection represents technical evidence found by the scanner and should be reviewed before reaching a conclusion.
