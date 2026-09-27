@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 <#
     Doomsday Client Scanner v3
 
@@ -8,26 +8,20 @@
 
     Nothing leaves the machine. The only thing written is the JSON report.
 
-    Examples:
-        .\doomsday-scanner-v3.ps1
-        .\doomsday-scanner-v3.ps1 -ScanPath "$env:APPDATA\.minecraft" -DebugLog
-        .\doomsday-scanner-v3.ps1 -HashList .\hashes.txt -OutputPath C:\Reports
+    Usage:
+        Run locally as a .ps1 file, or execute the raw GitHub source from PowerShell.
+        This direct-execution build uses the defaults below instead of script parameters.
 #>
-param(
-    # Extra folders swept recursively. Files are checked by content, not extension.
-    [string[]]$ScanPath,
-    # Folder (or .json file) for the report. Defaults to the Desktop.
-    [string]$OutputPath,
-    # Optional local list of SHA-256 hashes, one "<hash> [label]" per line.
-    [string]$HashList,
-    # USN activity newer than this is flagged as recent.
-    [int]$RecentMinutes = 60,
-    # Larger files are listed but not opened.
-    [int]$MaxFileSizeMB = 256,
-    [switch]$NoUsn,
-    [switch]$NoJson,
-    [switch]$DebugLog
-)
+# Defaults for direct execution (including Invoke-Expression / irm | iex).
+# This build intentionally does not use a script-level param(...) block.
+$ScanPath = $null
+$OutputPath = $null
+$HashList = $null
+$RecentMinutes = 60
+$MaxFileSizeMB = 256
+$NoUsn = $false
+$NoJson = $false
+$DebugLog = $false
 
 $script:ScannerVersion = '3.0.0'
 $script:Options = @{
