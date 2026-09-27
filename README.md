@@ -1,5 +1,5 @@
 # DoomsdayScannerModified
-Doomsday Client Scanner v2 — PowerShell forensic scanner made by Real. Detects Doomsday Client traces using Prefetch, USN Journal, JAR analysis, byte signatures and evidence-based detection.
+Doomsday Client Scanner v3 — PowerShell forensic scanner made by Real. Detects Doomsday Client traces using Prefetch, USN Journal, JAR analysis, byte signatures and evidence-based detection.
 # Doomsday Client Scanner
 
 A PowerShell forensic scanner designed to detect traces and possible installations of **Doomsday Client** on Windows systems.
