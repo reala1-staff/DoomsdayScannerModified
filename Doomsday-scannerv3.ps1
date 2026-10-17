@@ -1,5 +1,7 @@
 #Requires -Version 5.1
 # Doomsday Scanner v3
+# Modificado por Real (Discord: reala1)
+# Base original: iTake (@cheatinformer) / FM Forensics
 
 $ScanPath = $null
 $OutputPath = $null
@@ -37,8 +39,6 @@ $script:ExpectedClasses = @(
     'net/java/m', 'net/java/r', 'net/java/s', 'net/java/t', 'net/java/y'
 )
 
-# Only client-specific matches can qualify a file as a detection.
-# File metadata and Windows activity are supporting evidence.
 $script:Weights = @{
     KnownHash        = 100
     SignatureFirst   = 40
@@ -47,15 +47,15 @@ $script:Weights = @{
     ClassReference   = 1
     ReferenceCap     = 5
 
-    DisguisedExt     = 8   # Java archive under a misleading extension
+    DisguisedExt     = 8
     RenamedExt       = 4
     Polyglot         = 6
     HiddenClassData  = 6
-    InvalidClasses  = 6   # three or more invalid .class entries
+    InvalidClasses  = 6
     Obfuscated       = 3
     JavaAgent        = 5
     HiddenAttribute  = 4
-    AlternateStream  = 8   # archive stored in an NTFS alternate data stream
+    AlternateStream  = 8
     UsnRenamedAway   = 6
     SecondaryCap     = 15
 
@@ -68,7 +68,7 @@ $script:Weights = @{
 $script:Thresholds = @{
     High           = 70
     Medium         = 40
-    MinClassLayout = 3   # fewer expected classes than this is not enough on its own
+    MinClassLayout = 3
 }
 
 $script:DisguiseExtensions = @(
@@ -1332,16 +1332,7 @@ namespace DsScan
 '@
 
 function Show-Banner {
-    $duck1 = @"
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣦⡀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⡏⠉⢻⣷⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿⣿⣿⣿⣾⣿⣿⣶⣶⣶⣦⣤⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⠏⠉⠉⠉⠁⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣿⣿⣿⠿⠟⠀⠀⠀⠀⠀⠀⠀⠀
-"@
-
-    $duck2 = @"
+    $duck = @"
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣤⣤⣤⣤⣶⣾⣷⣄⠀⠀⠀⠀⠀
 ⠀⠀⣶⣤⣤⣤⣤⣤⣤⣶⣶⣶⣿⣿⣿⣿⣿⣿⣿⣿⠛⢻⣿⣿⣿⡆⠀⠀⠀⠀
 ⠀⠀⢹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠏⢀⣿⣿⣿⣿⡇⠀⠀⠀⠀
@@ -1349,25 +1340,13 @@ function Show-Banner {
 ⠀⠀⠀⠀⠙⠿⣿⣿⣶⣦⣤⣤⣤⣤⣤⣴⣶⣿⣿⣿⣿⣿⣿⡿⠏⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠈⠙⠛⠻⠿⠿⠿⢿⡿⠿⠿⠿⠟⠛⠉⠁⠀⠀⠀⠀⠀⠀⠀
 "@
-
-    $duck3 = @"
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⡄⢠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣧⣾⣶⣤⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠉⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-"@
-
-    Write-Host $duck1 -ForegroundColor Yellow
-    Write-Host $duck2 -ForegroundColor White
-    Write-Host $duck3 -ForegroundColor Yellow
-
-    Write-Host ""
-    Write-Host "                    Made by " -NoNewline
-    Write-Host "iTake (@cheatinformer) " -NoNewline -ForegroundColor White
-    Write-Host "@" -NoNewline -ForegroundColor Blue
-    Write-Host " FM Forensics" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "                    Doomsday Client Scanner v$script:ScannerVersion" -ForegroundColor Cyan
-    Write-Host ""
+    Write-Host ''
+    Write-Host $duck -ForegroundColor DarkYellow
+    Write-Host '  DOOMSDAY SCANNER' -ForegroundColor Cyan
+    Write-Host "  v$script:ScannerVersion  |  Modificado por Real (@reala1)" -ForegroundColor White
+    Write-Host '  Base: iTake (@cheatinformer) / FM Forensics' -ForegroundColor DarkGray
+    Write-Host ('  ' + ('-' * 46)) -ForegroundColor DarkGray
+    Write-Host ''
 }
 
 function Write-Step([string]$Text) { Write-Host "[*] $Text" -ForegroundColor Cyan }
@@ -2663,9 +2642,8 @@ function Start-DoomsdayScan {
 
     if ($detections.Count -gt 0) {
         Write-Host ''
-        Write-Host '========================================' -ForegroundColor Red
-        Write-Host 'DETECTIONS' -ForegroundColor Red
-        Write-Host '========================================' -ForegroundColor Red
+        Write-Host '  DETECTIONS' -ForegroundColor Red
+        Write-Host ('  ' + ('-' * 46)) -ForegroundColor DarkGray
         Write-Host '  [+] Doomsday-specific  [~] secondary  [>] context  [i] info' -ForegroundColor DarkGray
         Write-Host ''
         $n = 1
@@ -2688,9 +2666,8 @@ function Start-DoomsdayScan {
     foreach ($ref in $script:Refs.Values) { $refStates[$ref.State] = 1 + [int]$refStates[$ref.State] }
 
     Write-Host ''
-    Write-Host '========================================' -ForegroundColor Cyan
-    Write-Host 'SUMMARY' -ForegroundColor Cyan
-    Write-Host '========================================' -ForegroundColor Cyan
+    Write-Host '  SUMMARY' -ForegroundColor Cyan
+    Write-Host ('  ' + ('-' * 46)) -ForegroundColor DarkGray
     $rows = [ordered]@{
         'Java Prefetch parsed'  = "$($prefetch.Parsed)/$($prefetch.Files.Count)"
         'Historical paths'      = "$($script:Refs.Count) (deleted $([int]$refStates['Deleted']), missing $([int]$refStates['Missing']), moved $([int]$refStates['Moved']))"
@@ -2729,6 +2706,7 @@ function Start-DoomsdayScan {
 
     $report = [ordered]@{
         Version = $script:ScannerVersion
+        ModifiedBy = 'Real (@reala1)'
         Date = Format-IsoTime $finishedUtc
         Duration = [Math]::Round(($finishedUtc - $startedUtc).TotalSeconds, 1)
         Summary = [ordered]@{
